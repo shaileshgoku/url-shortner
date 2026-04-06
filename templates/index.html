@@ -1,25 +1,17 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>URL Shortener</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <div class="card">
-    <h2>🔗 URL Shortener</h2>
+<h2>🔗 URL Shortener</h2>
 
-    <form action="/shorten" method="POST">
-        <input name="url" required placeholder="Enter URL">
-        <button type="submit">Shorten</button>
-    </form>
+<form method="POST" action="/shorten">
+<input name="url" placeholder="Enter URL">
+<button>Shorten</button>
+</form>
 
-    <a href="/all">📂 View My URLs</a> |
-    <a href="/logout">🚪 Logout</a>
+<a href="/all">📂 View My URLs</a> |
+<a href="/logout">Logout</a>
 
-    {% if short_url %}
-        <h3>Short URL:</h3>
-        <a href="{{ short_url }}" target="_blank">{{ short_url }}</a>
-    {% endif %}
+{% if short_url %}
+<br><br>
+<a href="{{ short_url }}" target="_blank">{{ short_url }}</a>
+{% endif %}
 </div>
-</body>
-</html>

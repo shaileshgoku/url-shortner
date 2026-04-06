@@ -1,41 +1,29 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>My URLs</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
 <div class="card wide">
-    <a href="/" class="back">⬅ Back</a>
-    <h2>📂 My URLs</h2>
+<h2>My URLs</h2>
 
-    <table>
-        <tr>
-            <th>Short URL</th>
-            <th>Original URL</th>
-            <th>Action</th>
-        </tr>
+<table>
+<tr>
+<th>Short URL</th>
+<th>Original</th>
+<th>Action</th>
+</tr>
 
-        {% for code, url in data %}
-        <tr>
-            <td class="url-cell">
-                <a href="{{ request.host_url }}{{code}}" target="_blank">
-                    {{ request.host_url }}{{code}}
-                </a>
-            </td>
+{% for code,url in data %}
+<tr>
+<td class="url-cell">
+<a href="{{ request.host_url }}{{code}}" target="_blank">
+{{ request.host_url }}{{code}}
+</a>
+</td>
 
-            <td class="url-cell">
-                {{ url }}
-            </td>
+<td class="url-cell">{{url}}</td>
 
-            <td>
-                <a href="/delete/{{code}}" style="color:red;">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+<td><a href="/delete/{{code}}">Delete</a></td>
+</tr>
+{% endfor %}
+</table>
+
+<a href="/">Back</a>
 </div>
-
-</body>
-</html>
