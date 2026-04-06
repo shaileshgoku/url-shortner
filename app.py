@@ -1,19 +1,32 @@
-from flask import Flask, request, redirect, render_template, session
-import psycopg2
-import string, random, os
+from flask import Flask, request, redirect, render_template
+import psycopg2, os, string, random
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# 🔐 Flask Login
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-
-# 🔥 VERY IMPORTANT FOR RENDER (HTTPS)
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = "None"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_conn():
     return psycopg2.connect(DATABASE_URL)
+
+# ---------------------------
+# LOGIN MANAGER
+# ---------------------------
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(user_id)
 
 # ---------------------------
 # INIT DB
@@ -35,7 +48,7 @@ def init_db():
         id SERIAL PRIMARY KEY,
         short_code TEXT UNIQUE,
         original_url TEXT,
-        user_id INTEGER REFERENCES users(id)
+        user_id INTEGER
     )
     """)
 
@@ -46,8 +59,8 @@ def init_db():
 init_db()
 
 # ---------------------------
-def generate_code(length=6):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+def generate_code():
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
 # ---------------------------
 @app.route("/register", methods=["GET","POST"])
@@ -63,10 +76,11 @@ def register():
             cur.execute("INSERT INTO users (username,password) VALUES (%s,%s)", (username,password))
             conn.commit()
         except:
-            return "User exists"
+            return "User already exists"
 
         cur.close()
         conn.close()
+
         return redirect("/login")
 
     return render_template("register.html")
@@ -88,33 +102,30 @@ def login():
         conn.close()
 
         if user and check_password_hash(user[1], password):
-            session.clear()
-            session["user_id"] = user[0]
+            login_user(User(user[0]))   # 🔥 FIXED LOGIN
             return redirect("/")
 
-        return "Invalid login"
+        return "Invalid credentials"
 
     return render_template("login.html")
 
 # ---------------------------
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
-
-# ---------------------------
 @app.route("/")
+@login_required
 def home():
-    if "user_id" not in session:
-        return redirect("/login")
     return render_template("index.html")
 
 # ---------------------------
-@app.route("/shorten", methods=["POST"])
-def shorten():
-    if "user_id" not in session:
-        return redirect("/login")
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect("/login")
 
+# ---------------------------
+@app.route("/shorten", methods=["POST"])
+@login_required
+def shorten():
     url = request.form["url"]
 
     conn = get_conn()
@@ -128,7 +139,7 @@ def shorten():
 
     cur.execute(
         "INSERT INTO urls (short_code, original_url, user_id) VALUES (%s,%s,%s)",
-        (code, url, session["user_id"])
+        (code, url, current_user.id)
     )
 
     conn.commit()
@@ -151,18 +162,16 @@ def redirect_url(code):
 
     if data:
         return redirect(data[0])
-    return "Not found"
+    return "Invalid URL"
 
 # ---------------------------
 @app.route("/all")
+@login_required
 def all_urls():
-    if "user_id" not in session:
-        return redirect("/login")
-
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute("SELECT short_code, original_url FROM urls WHERE user_id=%s",(session["user_id"],))
+    cur.execute("SELECT short_code, original_url FROM urls WHERE user_id=%s",(current_user.id,))
     data = cur.fetchall()
 
     cur.close()
@@ -172,20 +181,18 @@ def all_urls():
 
 # ---------------------------
 @app.route("/delete/<code>")
+@login_required
 def delete(code):
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute("DELETE FROM urls WHERE short_code=%s AND user_id=%s",(code,session["user_id"]))
+    cur.execute("DELETE FROM urls WHERE short_code=%s AND user_id=%s",(code,current_user.id))
     conn.commit()
 
     cur.close()
     conn.close()
 
     return redirect("/all")
-
-# ---------------------------
-app.config['SESSION_COOKIE_SECURE'] = True
 
 # ---------------------------
 if __name__ == "__main__":
