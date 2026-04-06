@@ -84,6 +84,7 @@ def login():
         conn.close()
 
         if user and check_password_hash(user[1], password):
+            session.clear()   # 🔥 important
             session["user_id"] = user[0]
             return redirect("/")
 
@@ -178,6 +179,9 @@ def delete(code):
     conn.close()
 
     return redirect("/all")
+
+# ---------------------------
+app.config['SESSION_COOKIE_SECURE'] = True
 
 # ---------------------------
 if __name__ == "__main__":
