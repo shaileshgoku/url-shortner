@@ -6,6 +6,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
+# 🔥 VERY IMPORTANT FOR RENDER (HTTPS)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = "None"
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_conn():
@@ -84,7 +88,7 @@ def login():
         conn.close()
 
         if user and check_password_hash(user[1], password):
-            session.clear()   # 🔥 important
+            session.clear()
             session["user_id"] = user[0]
             return redirect("/")
 
